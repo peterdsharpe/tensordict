@@ -1,24 +1,77 @@
 {
-  "last_updated": "2026-08-07T18:35:16.493753+00:00",
+  "last_updated": "2026-08-08T06:34:10.862075+00:00",
   "stats": {
     "last_7_days": {
       "days": 7,
-      "runs_with_data": 2,
-      "total_workflow_runs": 12,
-      "total_success": 12,
+      "runs_with_data": 3,
+      "total_workflow_runs": 18,
+      "total_success": 18,
       "total_failure": 0,
       "success_rate": 100.0
     },
     "last_30_days": {
-      "days": 9,
-      "runs_with_data": 2,
-      "total_workflow_runs": 12,
-      "total_success": 12,
+      "days": 10,
+      "runs_with_data": 3,
+      "total_workflow_runs": 18,
+      "total_success": 18,
       "total_failure": 0,
       "success_rate": 100.0
     }
   },
   "history": [
+    {
+      "date": "2026-08-08",
+      "orchestrator_ran": true,
+      "orchestrator_status": "pending",
+      "orchestrator_url": "https://github.com/peterdsharpe/tensordict/actions/runs/31244199892",
+      "orchestrator_run_id": 31244199892,
+      "workflows": {
+        "test-linux.yml": {
+          "status": "success",
+          "conclusion": "success",
+          "url": "https://github.com/peterdsharpe/tensordict/actions/runs/31244199892/job/93069992174",
+          "display_name": "Linux Tests"
+        },
+        "test-macos.yml": {
+          "status": "success",
+          "conclusion": "success",
+          "url": "https://github.com/peterdsharpe/tensordict/actions/runs/31244199892/job/93069991795",
+          "display_name": "MacOS Tests"
+        },
+        "test-rl-gpu.yml": {
+          "status": "success",
+          "conclusion": "success",
+          "url": "https://github.com/peterdsharpe/tensordict/actions/runs/31244199892/job/93069991787",
+          "display_name": "RL GPU Tests"
+        },
+        "lint.yml": {
+          "status": "success",
+          "conclusion": "success",
+          "url": "https://github.com/peterdsharpe/tensordict/actions/runs/31244199892/job/93069991798",
+          "display_name": "Lint"
+        },
+        "docs.yml": {
+          "status": "success",
+          "conclusion": "success",
+          "url": "https://github.com/peterdsharpe/tensordict/actions/runs/31244199892/job/93069991779",
+          "display_name": "Documentation"
+        },
+        "benchmarks.yml": {
+          "status": "success",
+          "conclusion": "success",
+          "url": "https://github.com/peterdsharpe/tensordict/actions/runs/31244199892/job/93069991747",
+          "display_name": "Benchmarks"
+        }
+      },
+      "summary": {
+        "total": 6,
+        "success": 6,
+        "failure": 0,
+        "skipped": 0,
+        "other": 0,
+        "success_rate": 100.0
+      }
+    },
     {
       "date": "2026-08-07",
       "orchestrator_ran": true,
