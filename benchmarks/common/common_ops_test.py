@@ -578,6 +578,22 @@ def test_getitem(benchmark, td, c, index):
     benchmark(exec_getitem)
 
 
+@pytest.mark.parametrize("leaves", ["pixels", "vector"])
+def test_getitem_index_tensor(benchmark, leaves):
+    # A replay buffer samples 256 rows of its storage with a 1-D index tensor
+    torch.manual_seed(0)
+    n = 20000
+    if leaves == "pixels":
+        pixels = torch.randint(0, 256, (n, 4, 84, 84), dtype=torch.uint8)
+        td = TensorDict(
+            {"pixels": pixels, "next": {"pixels": pixels.clone()}}, batch_size=[n]
+        )
+    else:
+        td = TensorDict({str(i): torch.randn(n, 8) for i in range(10)}, [n])
+    index = torch.randint(0, n, (256,))
+    benchmark(td.__getitem__, index)
+
+
 @pytest.mark.parametrize("index", ["int", "slice_int", "range", "tuple"])
 def test_setitem_dim(benchmark, td, c, index):
     if index == "int":

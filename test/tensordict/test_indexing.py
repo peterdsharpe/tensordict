@@ -250,6 +250,39 @@ class TestTensorDictMatchesTorch:
                 failures[case] = "values"
         _check_known_failures(f"TensorDict getitem {batch_size}", failures)
 
+    @pytest.mark.parametrize("dtype", [torch.int64, torch.int32], ids=str)
+    def test_getitem_index_tensor(self, dtype, tmp_path):
+        # A 1-D index tensor selects the rows of CPU leaves with
+        # torch.index_select, which is faster than indexing (#2553)
+        reference = self._reference((5, 3))
+        td = TensorDict(
+            {
+                "x": reference.clone().requires_grad_(),
+                "nested": {"y": reference.clone().requires_grad_()},
+                "strided": reference.t().contiguous().t(),
+            },
+            [5],
+        )
+        index = torch.tensor([3, 0, 3], dtype=dtype)
+        result = td[index]
+        assert type(result["x"].grad_fn).__name__ == "IndexSelectBackward0"
+        assert type(result["nested", "y"].grad_fn).__name__ == "IndexSelectBackward0"
+        # a non-contiguous leaf keeps the strides that torch gives
+        assert result["strided"].stride() == td["strided"][index].stride()
+        memmap = td.detach().memmap(tmp_path)
+        for index in ([3, 0, 3], [-1, 0, -5], []):
+            index = torch.tensor(index, dtype=dtype)
+            expected = reference[index]
+            for source in (td, memmap):
+                result = source[index]
+                assert result.batch_size == expected.shape[:1]
+                for key in ("x", ("nested", "y"), "strided"):
+                    assert type(result[key]) is torch.Tensor
+                    torch.testing.assert_close(result[key], expected, rtol=0, atol=0)
+        for index in ([5], [-6]):
+            with pytest.raises(IndexError, match="out of bounds"):
+                td[torch.tensor(index, dtype=dtype)]
+
     @pytest.mark.parametrize("batch_size", BATCH_SIZES, ids=str)
     def test_setitem(self, batch_size):
         reference = self._reference(batch_size)

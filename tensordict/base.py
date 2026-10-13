@@ -7933,6 +7933,24 @@ class TensorDictBase(*_TENSORDICTBASE_MIXINS, MutableMapping, TensorCollection):
 
         _check_for_invalid_index(index)
 
+        # A 1-D integer index tensor on CPU: torch.index_select is much faster
+        # than advanced indexing for large rows (pytorch/pytorch#29973).
+        select_index = None
+        if (
+            batch_dims
+            and isinstance(index, tuple)
+            and len(index) == 1
+            and not is_compiling()
+        ):
+            select_index = index[0]
+            if not (
+                isinstance(select_index, Tensor)
+                and select_index.ndim == 1
+                and select_index.dtype in (torch.int64, torch.int32)
+                and select_index.is_cpu
+            ):
+                select_index = None
+
         if new_batch_size is not None:
             batch_size = new_batch_size
         else:
@@ -7951,6 +7969,25 @@ class TensorDictBase(*_TENSORDICTBASE_MIXINS, MutableMapping, TensorCollection):
                 source[key] = item._index_tensordict(
                     index, new_batch_size=new_batch_size
                 )
+            elif (
+                select_index is not None
+                and type(item) in (Tensor, MemoryMappedTensor)
+                and item.is_cpu
+                and item.layout is torch.strided
+                # index_select returns a contiguous tensor, indexing keeps
+                # the dim order of the leaf
+                and item.is_contiguous()
+            ):
+                try:
+                    source[key] = torch.index_select(item, 0, select_index)
+                    continue
+                except (IndexError, RuntimeError):
+                    # index_select rejects negative indices (with a
+                    # RuntimeError under vmap): index this leaf and the next
+                    # ones as before, which also raises the usual error for
+                    # an out-of-range index.
+                    select_index = None
+                source[key] = _get_item(item, index)
             else:
                 source[key] = _get_item(item, index)
         result = self._new_unsafe(
