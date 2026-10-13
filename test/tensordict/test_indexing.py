@@ -252,14 +252,14 @@ class TestTensorDictMatchesTorch:
 
     @pytest.mark.parametrize("dtype", [torch.int64, torch.int32], ids=str)
     def test_getitem_index_tensor(self, dtype, tmp_path):
-        # A 1-D index tensor selects the rows of CPU leaves with
+        # A 1-D index tensor selects the rows of large CPU leaves with
         # torch.index_select, which is faster than indexing (#2553)
-        reference = self._reference((5, 3))
+        reference = self._reference((5, 3, 4096))
         td = TensorDict(
             {
                 "x": reference.clone().requires_grad_(),
                 "nested": {"y": reference.clone().requires_grad_()},
-                "strided": reference.t().contiguous().t(),
+                "strided": reference.transpose(0, 2).contiguous().transpose(0, 2),
             },
             [5],
         )
@@ -267,6 +267,9 @@ class TestTensorDictMatchesTorch:
         result = td[index]
         assert type(result["x"].grad_fn).__name__ == "IndexSelectBackward0"
         assert type(result["nested", "y"].grad_fn).__name__ == "IndexSelectBackward0"
+        # small leaves keep the indexing path, which is cheaper for them
+        small = td.apply(lambda x: x[:, :1, :1])[index]
+        assert type(small["x"].grad_fn).__name__ == "IndexBackward0"
         # a non-contiguous leaf keeps the strides that torch gives
         assert result["strided"].stride() == td["strided"][index].stride()
         memmap = td.detach().memmap(tmp_path)

@@ -194,6 +194,10 @@ _SELF_NESTING_ERROR = (
 
 _HEURISTIC_EXCLUDED = (Tensor, tuple, list, set, dict, np.ndarray)
 
+# A 1-D index tensor selects rows with torch.index_select from a leaf of at
+# least this many elements, once the rows selected hold as many
+_INDEX_SELECT_MIN_NUMEL = 32768
+
 # Context-manager ops whose inverse __exit__ runs also when the body raises
 _UNDO_ON_ERROR_OPS = frozenset({"to_module", "lock_", "unlock_"})
 
@@ -7934,22 +7938,20 @@ class TensorDictBase(*_TENSORDICTBASE_MIXINS, MutableMapping, TensorCollection):
         _check_for_invalid_index(index)
 
         # A 1-D integer index tensor on CPU: torch.index_select is much faster
-        # than advanced indexing for large rows (pytorch/pytorch#29973).
+        # than advanced indexing for large rows (pytorch/pytorch#29973). It
+        # rejects negative indices, and wrapping them costs more than it saves
+        # on small leaves, so it is used once a leaf is large enough.
         select_index = None
         if (
             batch_dims
-            and isinstance(index, tuple)
+            and type(index) is tuple
             and len(index) == 1
+            and type(index[0]) is Tensor
             and not is_compiling()
         ):
             select_index = index[0]
-            if not (
-                isinstance(select_index, Tensor)
-                and select_index.ndim == 1
-                and select_index.dtype in (torch.int64, torch.int32)
-                and select_index.is_cpu
-            ):
-                select_index = None
+            select_limit = _INDEX_SELECT_MIN_NUMEL
+            select_wrapped = False
 
         if new_batch_size is not None:
             batch_size = new_batch_size
@@ -7972,22 +7974,53 @@ class TensorDictBase(*_TENSORDICTBASE_MIXINS, MutableMapping, TensorCollection):
             elif (
                 select_index is not None
                 and type(item) in (Tensor, MemoryMappedTensor)
-                and item.is_cpu
-                and item.layout is torch.strided
-                # index_select returns a contiguous tensor, indexing keeps
-                # the dim order of the leaf
-                and item.is_contiguous()
+                and item.numel() >= select_limit
             ):
-                try:
-                    source[key] = torch.index_select(item, 0, select_index)
-                    continue
-                except (IndexError, RuntimeError):
-                    # index_select rejects negative indices (with a
-                    # RuntimeError under vmap): index this leaf and the next
-                    # ones as before, which also raises the usual error for
-                    # an out-of-range index.
-                    select_index = None
-                source[key] = _get_item(item, index)
+                if not select_wrapped:
+                    # the leaf numel at which the rows selected reach
+                    # _INDEX_SELECT_MIN_NUMEL elements
+                    select_limit = max(
+                        select_limit,
+                        _INDEX_SELECT_MIN_NUMEL
+                        * self.batch_size[0]
+                        // (select_index.numel() or 1),
+                    )
+                    if item.numel() < select_limit:
+                        pass
+                    elif (
+                        select_index.ndim == 1
+                        and select_index.dtype in (torch.int64, torch.int32)
+                        and select_index.is_cpu
+                    ):
+                        select_index = torch.where(
+                            select_index < 0,
+                            select_index + self.batch_size[0],
+                            select_index,
+                        )
+                        select_wrapped = True
+                        # every leaf gains from it now
+                        select_limit = 0
+                    else:
+                        select_index = None
+                if (
+                    select_wrapped
+                    and select_index is not None
+                    and item.is_cpu
+                    and item.layout is torch.strided
+                    # index_select returns a contiguous tensor, indexing
+                    # keeps the dim order of the leaf
+                    and item.is_contiguous()
+                ):
+                    try:
+                        source[key] = torch.index_select(item, 0, select_index)
+                        continue
+                    except (IndexError, RuntimeError):
+                        # An out-of-range index: index this leaf as before,
+                        # which raises the usual error.
+                        select_index = None
+                # _get_item without the call: it only differs for an index
+                # that is a list
+                source[key] = item[index]
             else:
                 source[key] = _get_item(item, index)
         result = self._new_unsafe(
