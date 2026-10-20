@@ -139,7 +139,7 @@ def _series_to_column(series) -> np.ndarray | list:
     value (``NaN``, ``None``, ``NaT`` or ``pd.NA``), as those readers do (#3096).
     """
     arr = series.to_numpy()
-    if arr.dtype.kind in ("i", "f", "u", "b", "M"):
+    if arr.dtype.kind in ("i", "f", "u", "b", "c", "M"):
         return arr
     return series.astype(object).where(series.notna(), None).tolist()
 

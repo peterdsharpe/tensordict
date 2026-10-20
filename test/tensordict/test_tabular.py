@@ -80,10 +80,17 @@ class TestFromPandas:
     def test_string_columns(self):
         import pandas as pd
 
-        df = pd.DataFrame({"name": ["alice", "bob", "charlie"], "age": [25, 30, 35]})
+        df = pd.DataFrame(
+            {
+                "name": ["alice", "bob", "charlie"],
+                "age": [25, 30, 35],
+                "z": [1j, 2j, 3j],
+            }
+        )
         td = TensorDict.from_pandas(df)
         assert td.batch_size == torch.Size([3])
         assert td["age"].dtype == torch.int64
+        assert td["z"].dtype == torch.complex128
         # One value per row, as without pandas (#3096)
         assert isinstance(td.get("name"), NonTensorStack)
         assert td["name"] == ["alice", "bob", "charlie"]
