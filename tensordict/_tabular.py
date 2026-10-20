@@ -131,6 +131,19 @@ def _columns_to_tensordict(
     return cls(data, batch_size=batch_size, device=device)
 
 
+def _series_to_column(series) -> np.ndarray | list:
+    """A pandas column as a numpy array of numbers or datetimes, or a list with one value per row.
+
+    The list becomes a :class:`~tensordict.NonTensorStack`, as the columns the
+    readers without pandas give, and holds ``None`` where pandas has a missing
+    value (``NaN``, ``None``, ``NaT`` or ``pd.NA``), as those readers do (#3096).
+    """
+    arr = series.to_numpy()
+    if arr.dtype.kind in ("i", "f", "u", "b", "M"):
+        return arr
+    return series.astype(object).where(series.notna(), None).tolist()
+
+
 def _dataframe_to_tensordict(
     dataframe,
     *,
@@ -149,8 +162,7 @@ def _dataframe_to_tensordict(
         if hasattr(series, "cat") and series.cat is not None:
             columns[str(col)] = series.cat.codes.to_numpy().copy()
         else:
-            arr = series.to_numpy()
-            columns[str(col)] = arr
+            columns[str(col)] = _series_to_column(series)
 
     return _columns_to_tensordict(
         columns,
@@ -247,7 +259,7 @@ def _read_csv(path, **kwargs) -> tuple[dict[str, np.ndarray | list], int]:
             if hasattr(series, "cat") and series.cat is not None:
                 columns[str(col)] = series.cat.codes.to_numpy().copy()
             else:
-                columns[str(col)] = series.to_numpy()
+                columns[str(col)] = _series_to_column(series)
         return columns, len(df)
     elif _has_pyarrow():
         import pyarrow.csv as pcsv
@@ -276,7 +288,7 @@ def _read_parquet(
         df = pd.read_parquet(path, columns=columns, **kwargs)
         col_dict = {}
         for col in df.columns:
-            col_dict[str(col)] = df[col].to_numpy()
+            col_dict[str(col)] = _series_to_column(df[col])
         return col_dict, len(df)
     else:
         raise ImportError(
@@ -295,7 +307,7 @@ def _read_json(
         df = pd.read_json(path, lines=lines, **kwargs)
         columns = {}
         for col in df.columns:
-            columns[str(col)] = df[col].to_numpy()
+            columns[str(col)] = _series_to_column(df[col])
         return columns, len(df)
     else:
         import json

@@ -19,7 +19,7 @@ from tensordict import (
     TensorDict,
     TensorDictBase,
 )
-from tensordict.tensorclass import NonTensorData, NonTensorStack
+from tensordict.tensorclass import NonTensorStack
 
 _has_pandas = importlib.util.find_spec("pandas") is not None
 _has_pyarrow = importlib.util.find_spec("pyarrow") is not None
@@ -84,9 +84,36 @@ class TestFromPandas:
         td = TensorDict.from_pandas(df)
         assert td.batch_size == torch.Size([3])
         assert td["age"].dtype == torch.int64
-        name_val = td["name"]
+        # One value per row, as without pandas (#3096)
+        assert isinstance(td.get("name"), NonTensorStack)
+        assert td["name"] == ["alice", "bob", "charlie"]
+        assert td[1]["name"] == "bob"
+        assert td.unbind(0)[2]["name"] == "charlie"
+        assert td.to_pandas()["name"].tolist() == ["alice", "bob", "charlie"]
 
-        assert isinstance(name_val, NonTensorData) or hasattr(name_val, "tolist")
+    def test_string_columns_missing_mixed_nested(self, tmp_path):
+        import pandas as pd
+
+        df = pd.DataFrame(
+            {
+                "obs.name": ["a", None, "c"],
+                "obs.mixed": ["a", 1, 2.5],
+                "obs.x": [1, 2, 3],
+            }
+        )
+        td = TensorDict.from_pandas(df, separator=".")
+        # A missing value is None, as without pandas (#3096)
+        assert td["obs", "name"] == ["a", None, "c"]
+        assert td["obs", "mixed"] == ["a", 1, 2.5]
+        assert td[2]["obs", "name"] == "c"
+        assert td.memmap(tmp_path / "memmap")[2]["obs", "name"] == "c"
+        assert td.consolidate()[2]["obs", "name"] == "c"
+        df.to_csv(tmp_path / "data.csv", index=False)
+        assert TensorDict.from_csv(tmp_path / "data.csv")["obs.name"] == [
+            "a",
+            None,
+            "c",
+        ]
 
     def test_bool_columns(self):
         import pandas as pd

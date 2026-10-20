@@ -2836,9 +2836,11 @@ class _Conversion:
         """Converts a pandas DataFrame to a tensordict, with one entry per column.
 
         The batch size is ``[num_rows]``. Numeric and boolean columns become
-        tensors, string and object columns become non-tensor data, a
-        categorical column becomes the tensor of its codes, and a datetime
-        column becomes an ``int64`` tensor of nanoseconds.
+        tensors, a categorical column becomes the tensor of its codes, and a
+        datetime column becomes an ``int64`` tensor of nanoseconds. Any other
+        column, such as a string or object column, becomes a
+        :class:`~tensordict.NonTensorStack` with one value per row, and
+        ``None`` where pandas has a missing value.
         :meth:`~.to_pandas` converts back.
 
         Args:
