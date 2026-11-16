@@ -1,5 +1,5 @@
 {
-  "last_updated": "2026-11-15T22:09:18.801490+00:00",
+  "last_updated": "2026-11-16T13:08:57.421914+00:00",
   "stats": {
     "last_7_days": {
       "days": 7,
@@ -11,14 +11,28 @@
     },
     "last_30_days": {
       "days": 30,
-      "runs_with_data": 28,
-      "total_workflow_runs": 168,
-      "total_success": 168,
+      "runs_with_data": 27,
+      "total_workflow_runs": 162,
+      "total_success": 162,
       "total_failure": 0,
       "success_rate": 100.0
     }
   },
   "history": [
+    {
+      "date": "2026-11-16",
+      "orchestrator_ran": false,
+      "orchestrator_status": "not_run",
+      "orchestrator_url": null,
+      "workflows": {},
+      "summary": {
+        "total": 0,
+        "success": 0,
+        "failure": 0,
+        "skipped": 0,
+        "success_rate": null
+      }
+    },
     {
       "date": "2026-11-15",
       "orchestrator_ran": true,
@@ -4568,59 +4582,6 @@
           "status": "success",
           "conclusion": "success",
           "url": "https://github.com/peterdsharpe/tensordict/actions/runs/32223328704/job/95977972256",
-          "display_name": "Benchmarks"
-        }
-      },
-      "summary": {
-        "total": 6,
-        "success": 6,
-        "failure": 0,
-        "skipped": 0,
-        "other": 0,
-        "success_rate": 100.0
-      }
-    },
-    {
-      "date": "2026-08-18",
-      "orchestrator_ran": true,
-      "orchestrator_status": "queued",
-      "orchestrator_url": "https://github.com/peterdsharpe/tensordict/actions/runs/32106803956",
-      "orchestrator_run_id": 32106803956,
-      "workflows": {
-        "test-linux.yml": {
-          "status": "success",
-          "conclusion": "success",
-          "url": "https://github.com/peterdsharpe/tensordict/actions/runs/32106803956/job/95617815647",
-          "display_name": "Linux Tests"
-        },
-        "test-macos.yml": {
-          "status": "success",
-          "conclusion": "success",
-          "url": "https://github.com/peterdsharpe/tensordict/actions/runs/32106803956/job/95617814688",
-          "display_name": "MacOS Tests"
-        },
-        "test-rl-gpu.yml": {
-          "status": "success",
-          "conclusion": "success",
-          "url": "https://github.com/peterdsharpe/tensordict/actions/runs/32106803956/job/95617814580",
-          "display_name": "RL GPU Tests"
-        },
-        "lint.yml": {
-          "status": "success",
-          "conclusion": "success",
-          "url": "https://github.com/peterdsharpe/tensordict/actions/runs/32106803956/job/95617814680",
-          "display_name": "Lint"
-        },
-        "docs.yml": {
-          "status": "success",
-          "conclusion": "success",
-          "url": "https://github.com/peterdsharpe/tensordict/actions/runs/32106803956/job/95617814718",
-          "display_name": "Documentation"
-        },
-        "benchmarks.yml": {
-          "status": "success",
-          "conclusion": "success",
-          "url": "https://github.com/peterdsharpe/tensordict/actions/runs/32106803956/job/95617814605",
           "display_name": "Benchmarks"
         }
       },
